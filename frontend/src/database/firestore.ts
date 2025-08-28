@@ -1,30 +1,20 @@
-import admin from 'firebase-admin';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 
-let firestore: admin.firestore.Firestore;
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyC4J7klu-GKEOu3Agxp8k_TJPCQlNibmik",
+  authDomain: "finance-system-ab66d.firebaseapp.com",
+  projectId: "finance-system-ab66d",
+  storageBucket: "finance-system-ab66d.firebasestorage.app",
+  messagingSenderId: "953700976889",
+  appId: "1:953700976889:web:0feb2eb9a84586da30ba28",
+  measurementId: "G-5VPMZ305WM"
+};
 
-export async function initFirestore() {
-  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!serviceAccountBase64) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set.');
-  }
-  let serviceAccountJson: string;
-  try {
-    serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('utf8');
-  } catch (err) {
-    throw new Error('Failed to decode base64 service account: ' + err);
-  }
-  let serviceAccount;
-  try {
-    serviceAccount = JSON.parse(serviceAccountJson);
-  } catch (err) {
-    throw new Error('Service account JSON is invalid: ' + err);
-  }
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  }
-  firestore = admin.firestore();
-}
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const firestore = getFirestore(app);
 
-export { firestore };
+export { app, firestore };
