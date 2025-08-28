@@ -12,10 +12,7 @@ import { onUserChanged, logout } from './database/auth';
 
 export default function App() {
   const [systems, setSystems] = useState<System[]>([]);
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const msgs = localStorage.getItem('messages');
-    return msgs ? JSON.parse(msgs) : [];
-  });
+  const [messages, setMessages] = useState<Message[]>([]);
   const [showSystemModal, setShowSystemModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -29,11 +26,15 @@ export default function App() {
     if (user) {
       (async () => {
         try {
-          const { getSystemsFromFirestore } = await import('./database/api');
-          const fetched = await getSystemsFromFirestore();
-          setSystems(fetched);
+          const { getSystemsFromFirestore, getMessagesFromFirestore } = await import('./database/api');
+          const [fetchedSystems, fetchedMessages] = await Promise.all([
+            getSystemsFromFirestore(),
+            getMessagesFromFirestore()
+          ]);
+          setSystems(fetchedSystems);
+          setMessages(fetchedMessages);
         } catch (err) {
-          console.error('Erro ao buscar sistemas do Firestore:', err);
+          console.error('Erro ao buscar dados do Firestore:', err);
         }
       })();
     }
@@ -54,7 +55,6 @@ export default function App() {
   function handleSendMessage(msg: Message) {
     const updated = [...messages, msg];
     setMessages(updated);
-    localStorage.setItem('messages', JSON.stringify(updated));
     setShowMessageModal(false);
   }
 
