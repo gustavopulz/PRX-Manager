@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Home from './pages/Home';
 import About from './pages/About';
 import Modal from './components/Modal';
@@ -9,10 +9,21 @@ import type { System, Message } from './types';
 import Header from './components/Header';
 
 export default function App() {
-  const [systems, setSystems] = useState<System[]>(() => {
-    const sys = localStorage.getItem('systems');
-    return sys ? JSON.parse(sys) : [];
-  });
+  const [systems, setSystems] = useState<System[]>([]);
+
+  // Buscar sistemas do Firestore ao montar
+  useEffect(() => {
+    (async () => {
+      try {
+        const { initFirestore, getSystemsFromFirestore } = await import('./database/api');
+        await initFirestore();
+        const fetched = await getSystemsFromFirestore();
+        setSystems(fetched);
+      } catch (err) {
+        console.error('Erro ao buscar sistemas do Firestore:', err);
+      }
+    })();
+  }, []);
   const [messages, setMessages] = useState<Message[]>(() => {
     const msgs = localStorage.getItem('messages');
     return msgs ? JSON.parse(msgs) : [];
@@ -21,11 +32,16 @@ export default function App() {
   const [showSystemModal, setShowSystemModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
 
-  function handleSaveSystem(system: System) {
-    const updated = [...systems, system];
-    setSystems(updated);
-    localStorage.setItem('systems', JSON.stringify(updated));
-    setShowSystemModal(false);
+  async function handleSaveSystem(system: System) {
+    try {
+      const { saveSystemToFirestore } = await import('./database/api');
+      await saveSystemToFirestore(system);
+      const updated = [...systems, system];
+      setSystems(updated);
+      setShowSystemModal(false);
+    } catch (err) {
+      alert('Erro ao salvar sistema no Firestore: ' + err);
+    }
   }
 
   function handleSendMessage(msg: Message) {
