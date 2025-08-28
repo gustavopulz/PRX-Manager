@@ -1,19 +1,12 @@
-import { firestore, initFirestore } from './firestore';
+import { firestore } from './firestore';
 import type { System } from '../types';
-
-export { initFirestore };
+import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
 
 export async function saveSystemToFirestore(system: System) {
-	if (!firestore) {
-		throw new Error('Firestore não inicializado. Chame initFirestore primeiro.');
-	}
-	await firestore.collection('manager_systems').doc(system.id).set(system);
+	await setDoc(doc(collection(firestore, 'manager_systems'), system.id), system);
 }
 
 export async function getSystemsFromFirestore(): Promise<System[]> {
-	if (!firestore) {
-		throw new Error('Firestore não inicializado. Chame initFirestore primeiro.');
-	}
-	const snapshot = await firestore.collection('manager_systems').get();
+	const snapshot = await getDocs(collection(firestore, 'manager_systems'));
 	return snapshot.docs.map(doc => doc.data() as System);
 }
