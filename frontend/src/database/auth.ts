@@ -3,7 +3,6 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import type { User } from 'firebase/auth';
 import { app } from './firestore'; // Certifique-se de exportar 'app' do firestore.ts
 
-
 const auth = getAuth(app);
 
 export function login(email: string, password: string) {

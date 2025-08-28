@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Message, System } from '../types';
+import { saveMessageToFirestore } from '../database/api';
 
 interface Props {
   systems: System[];
@@ -21,7 +22,7 @@ export default function SendMessageForm({ systems, onSend }: Props) {
     const webhookUrl =
       channel === 'changelog' ? sys.webhookChangelog : sys.webhookMelhoria;
 
-    // Criar objeto de mensagem para localStorage
+    // Criar objeto de mensagem para Firestore
     const msg: Message = {
       id: crypto.randomUUID(),
       systemId: sys.id,
@@ -62,7 +63,8 @@ export default function SendMessageForm({ systems, onSend }: Props) {
       console.error('Falha ao enviar mensagem:', err);
     }
 
-    // salvar localmente
+    // Salvar mensagem no Firestore
+    await saveMessageToFirestore(msg);
     onSend(msg);
 
     // resetar form
