@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Task } from '../../types';
+import type { Task, Flag } from '../../types';
 
 interface TaskListProps {
   tasks: Task[];
@@ -9,6 +9,9 @@ interface TaskListProps {
   onCreateCategoria: () => void;
   onCreateEnvolvido: () => void;
   onCreateTask: () => void;
+  onOpenFlag?: () => void;
+  flags?: Flag[];
+  onAssignFlag?: (task: Task) => void;
 }
 
 // Normaliza texto (remove acento e deixa minúsculo)
@@ -26,6 +29,9 @@ export const TaskList: React.FC<TaskListProps> = ({
   onCreateCategoria,
   onCreateEnvolvido,
   onCreateTask,
+  onOpenFlag,
+  flags,
+  onAssignFlag,
 }) => {
   const statusColors: Record<string, string> = {
     triagem: 'bg-slate-500 text-white',
@@ -57,6 +63,12 @@ export const TaskList: React.FC<TaskListProps> = ({
             + Envolvido
           </button>
           <button
+            className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-md text-sm font-medium"
+            onClick={() => onOpenFlag && onOpenFlag()}
+          >
+            + Flags
+          </button>
+          <button
             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm font-medium"
             onClick={onCreateTask}
           >
@@ -73,6 +85,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 'Status',
                 'Título',
                 'Categoria',
+                'Flag',
                 'Envolvidos',
                 'Progresso',
                 'Ações',
@@ -151,6 +164,35 @@ export const TaskList: React.FC<TaskListProps> = ({
                     </button>
                   </td>
 
+                  {/* Flag (clicável para atribuir/alterar) */}
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => onAssignFlag && onAssignFlag(task)}
+                      className="rounded px-1 py-0.5"
+                    >
+                      {task.flagId ? (
+                        (() => {
+                          const flag =
+                            task.categoria.flags?.find(
+                              (f) => f.id === task.flagId
+                            ) || flags?.find((f) => f.id === task.flagId);
+                          return flag ? (
+                            <span
+                              className="px-2 py-1 rounded text-xs font-semibold"
+                              style={{ background: flag.cor, color: '#fff' }}
+                            >
+                              {flag.nome}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-sm">—</span>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-slate-400 text-sm">—</span>
+                      )}
+                    </button>
+                  </td>
+
                   {/* Envolvidos */}
                   <td className="px-4 py-3">
                     <button
@@ -180,9 +222,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-slate-700 rounded-full h-2 overflow-hidden">
                         <div
-                          className={`h-2 rounded-full ${
-                            progress === 100 ? 'bg-green-500' : 'bg-blue-500'
-                          }`}
+                          className={`h-2 rounded-full ${progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                           style={{ width: `${progress}%` }}
                         ></div>
                       </div>
@@ -191,7 +231,6 @@ export const TaskList: React.FC<TaskListProps> = ({
                       </span>
                     </div>
                   </td>
-
                   {/* Ações */}
                   <td className="px-4 py-3 space-x-3 text-right">
                     <button

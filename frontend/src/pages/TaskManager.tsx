@@ -8,7 +8,8 @@ import { TaskForm } from '../components/Tasks/TaskForm';
 import CreateCategoriaModal from '../components/Tasks/CreateCategoriaModal';
 import CreateEnvolvidoModal from '../components/Tasks/CreateEnvolvidoModal';
 import { TaskDetails } from '../components/Tasks/TaskDetails';
-import type { Task, Categoria, Envolvido } from '../types';
+import FlagModal from '../components/Tasks/FlagModal';
+import type { Flag, Task, Categoria, Envolvido } from '../types';
 import {
   getTasksFromFirestore,
   saveTaskToFirestore,
@@ -47,9 +48,11 @@ const TaskManager: React.FC = () => {
   const [showConcluidos, setShowConcluidos] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([]);
+  const [flags, setFlags] = useState<Flag[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
   const [showCreateCategoriaModal, setShowCreateCategoriaModal] =
     useState(false);
   const [showCreateEnvolvidoModal, setShowCreateEnvolvidoModal] =
@@ -61,6 +64,8 @@ const TaskManager: React.FC = () => {
     null
   );
   const [editFilaTask, setEditFilaTask] = useState<Task | null>(null);
+  const [assignFlagTask, setAssignFlagTask] = useState<Task | null>(null);
+  const [assignFlagId, setAssignFlagId] = useState<string>('');
 
   // Listeners para eventos de edição
   useEffect(() => {
@@ -73,13 +78,18 @@ const TaskManager: React.FC = () => {
     function handleEditFila(e: any) {
       setEditFilaTask(e.detail);
     }
+    function handleOpenFlagModal() {
+      setShowFlagModal(true);
+    }
     window.addEventListener('editCategoria', handleSelectCategoria);
     window.addEventListener('editEnvolvidos', handleSelectEnvolvidos);
     window.addEventListener('editFila', handleEditFila);
+    window.addEventListener('openFlagModal', handleOpenFlagModal as any);
     return () => {
       window.removeEventListener('editCategoria', handleSelectCategoria);
       window.removeEventListener('editEnvolvidos', handleSelectEnvolvidos);
       window.removeEventListener('editFila', handleEditFila);
+      window.removeEventListener('openFlagModal', handleOpenFlagModal as any);
     };
   }, []);
 
@@ -188,6 +198,12 @@ const TaskManager: React.FC = () => {
           onCreateCategoria={() => setShowCreateCategoriaModal(true)}
           onCreateEnvolvido={() => setShowCreateEnvolvidoModal(true)}
           onCreateTask={() => setShowCreateModal(true)}
+          onOpenFlag={() => setShowFlagModal(true)}
+          flags={flags}
+          onAssignFlag={(task) => {
+            setAssignFlagTask(task);
+            setAssignFlagId(task.flagId || '');
+          }}
         />
       </div>
 
@@ -221,6 +237,7 @@ const TaskManager: React.FC = () => {
             <TaskForm
               categorias={categorias}
               envolvidos={envolvidos}
+              flags={flags}
               onSave={(task) => {
                 handleSaveTask(task);
                 setShowCreateModal(false);
@@ -282,6 +299,79 @@ const TaskManager: React.FC = () => {
         onClose={() => setEditFilaTask(null)}
         onSave={handleUpdateFila}
       />
+
+      {/* Flag modal */}
+      <FlagModal
+        isOpen={showFlagModal}
+        onClose={() => setShowFlagModal(false)}
+        flags={flags}
+        onSave={(newFlags) => {
+          setFlags(newFlags);
+          setShowFlagModal(false);
+        }}
+      />
+
+      {/* Assign flag modal */}
+      {assignFlagTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-white mb-3">
+              Atribuir Flag
+            </h3>
+            <div className="flex flex-col gap-2">
+              <label className="text-slate-300 text-sm">Flag</label>
+              <select
+                value={assignFlagId}
+                onChange={(e) => setAssignFlagId(e.target.value)}
+                className="border border-slate-700 bg-slate-800 text-white px-3 py-2 rounded-md"
+              >
+                <option value="">Nenhuma</option>
+                {(() => {
+                  const catFlags = assignFlagTask.categoria.flags || [];
+                  const available = [
+                    ...catFlags,
+                    ...flags.filter(
+                      (f) => !catFlags.find((cf) => cf.id === f.id)
+                    ),
+                  ];
+                  return available.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.nome}
+                    </option>
+                  ));
+                })()}
+              </select>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button
+                className="px-4 py-2 bg-slate-700 text-white rounded"
+                onClick={() => setAssignFlagTask(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+                onClick={() => {
+                  if (!assignFlagTask) return;
+                  const updated = {
+                    ...assignFlagTask,
+                    flagId: assignFlagId || undefined,
+                  } as Task;
+                  updateTaskInFirestore(updated.id, updated).then(() => {
+                    setTasks((prev) =>
+                      prev.map((t) => (t.id === updated.id ? updated : t))
+                    );
+                    setAssignFlagTask(null);
+                    sendDiscordWebhook(updated);
+                  });
+                }}
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

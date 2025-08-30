@@ -1,3 +1,9 @@
+export interface Flag {
+  id: string;
+  nome: string;
+  cor: string;
+  webhook: string;
+}
 export interface System {
   id: string;
   name: string;
@@ -23,6 +29,7 @@ export interface Categoria {
   nome: string;
   cor: string; // hex ou nome
   webhook?: string;
+  flags?: Flag[];
 }
 
 export interface Envolvido {
@@ -53,4 +60,5 @@ export interface Task {
   criadoEm: string;
   atualizadoEm: string;
   arquivada?: boolean;
+  flagId?: string;
 }

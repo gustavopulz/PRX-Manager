@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
-import type { Task, Categoria, Envolvido } from '../../types';
+import type { Task, Categoria, Envolvido, Flag } from '../../types';
 
 interface TaskFormProps {
   categorias: Categoria[];
   envolvidos: Envolvido[];
+  flags?: Flag[];
   onSave: (task: Task) => void;
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({
   categorias,
   envolvidos,
+  flags,
   onSave,
 }) => {
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [status, setStatus] = useState('Triagem');
   const [categoriaId, setCategoriaId] = useState('');
+  const [flagId, setFlagId] = useState('');
   const [envolvidosIds, setEnvolvidosIds] = useState<string[]>([]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -35,6 +38,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       descricao,
       status: status as any,
       categoria,
+      flagId,
       envolvidos: envolvidosSelecionados,
       checklists: [],
       criadoEm: now,
@@ -109,6 +113,27 @@ export const TaskForm: React.FC<TaskFormProps> = ({
                 {c.nome}
               </option>
             ))}
+          </select>
+        </div>
+
+        {/* Flag selector (depende da categoria selecionada) */}
+        <div className="flex flex-col gap-1">
+          <label className="text-slate-300 text-sm font-medium">Flag</label>
+          <select
+            value={flagId}
+            onChange={(e) => setFlagId(e.target.value)}
+            className="border border-slate-700 bg-slate-800 text-white px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+          >
+            <option value="">Nenhuma</option>
+            {(() => {
+              const cat = categorias.find((c) => c.id === categoriaId);
+              const available = cat?.flags || flags || [];
+              return available.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}
+                </option>
+              ));
+            })()}
           </select>
         </div>
       </div>

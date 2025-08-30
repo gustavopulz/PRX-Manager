@@ -56,6 +56,12 @@ const CreateCategoriaModal: React.FC<CreateCategoriaModalProps> = ({
     }
   }, [isOpen]);
 
+  // Remove setFlags and its usage, as there is no flags state in this component.
+
+  // Remove setFlags and its usage, as there is no flags state in this component.
+
+  // Remove setFlags and its usage, as there is no flags state in this component.
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Nova Categoria">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -74,13 +80,6 @@ const CreateCategoriaModal: React.FC<CreateCategoriaModalProps> = ({
             className="w-10 h-10 p-0 border border-slate-700 rounded"
           />
         </div>
-        <input
-          value={webhook}
-          onChange={(e) => setWebhook(e.target.value)}
-          placeholder="Webhook do Discord"
-          className="border border-slate-700 bg-slate-900 text-white px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-700"
-          required
-        />
         <div className="flex gap-2 mt-2">
           <button
             type="submit"
@@ -94,7 +93,6 @@ const CreateCategoriaModal: React.FC<CreateCategoriaModalProps> = ({
             onClick={() => {
               setNome('');
               setCor('#2196f3');
-              setWebhook('');
               setEditCategoria(null);
               onClose();
             }}
@@ -105,34 +103,55 @@ const CreateCategoriaModal: React.FC<CreateCategoriaModalProps> = ({
       </form>
       <div className="mt-4">
         <h3 className="font-semibold mb-2 text-white">Categorias</h3>
+        {/* Flags are gerenciadas pelo painel principal agora */}
         <ul className="space-y-2">
           {categorias.map((cat) => (
-            <li key={cat.id} className="flex items-center gap-2">
-              <span
-                className="px-2 py-1 rounded"
-                style={{ background: cat.cor, color: '#fff' }}
-              >
-                {cat.nome}
-              </span>
-              <button
-                className="bg-yellow-600 text-white px-2 py-1 rounded text-xs"
-                onClick={() => {
-                  setEditCategoria(cat);
-                  setNome(cat.nome);
-                  setCor(cat.cor);
-                }}
-              >
-                Editar
-              </button>
-              <button
-                className="bg-red-600 text-white px-2 py-1 rounded text-xs"
-                onClick={async () => {
-                  await deleteDoc(doc(firestore, 'manager_categorias', cat.id));
-                  setCategorias((prev) => prev.filter((c) => c.id !== cat.id));
-                }}
-              >
-                Deletar
-              </button>
+            <li key={cat.id} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className="px-2 py-1 rounded"
+                  style={{ background: cat.cor, color: '#fff' }}
+                >
+                  {cat.nome}
+                </span>
+                <button
+                  className="bg-yellow-600 text-white px-2 py-1 rounded text-xs"
+                  onClick={() => {
+                    setEditCategoria(cat);
+                    setNome(cat.nome);
+                    setCor(cat.cor);
+                  }}
+                >
+                  Editar
+                </button>
+                <button
+                  className="bg-red-600 text-white px-2 py-1 rounded text-xs"
+                  onClick={async () => {
+                    await deleteDoc(
+                      doc(firestore, 'manager_categorias', cat.id)
+                    );
+                    setCategorias((prev) =>
+                      prev.filter((c) => c.id !== cat.id)
+                    );
+                  }}
+                >
+                  Deletar
+                </button>
+              </div>
+              {/* Exibir flags da categoria */}
+              {cat.flags && cat.flags.length > 0 && (
+                <div className="flex gap-2 flex-wrap mt-1">
+                  {cat.flags.map((flag) => (
+                    <span
+                      key={flag.id}
+                      className="px-2 py-1 rounded text-xs font-semibold"
+                      style={{ background: flag.cor, color: '#fff' }}
+                    >
+                      {flag.nome}
+                    </span>
+                  ))}
+                </div>
+              )}
             </li>
           ))}
         </ul>
