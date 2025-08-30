@@ -15,3 +15,42 @@ export interface Message {
   embed: boolean;
   createdAt: string;
 }
+
+export type TaskStatus = 'Triagem' | 'Em Andamento' | 'Testes' | 'Concluído';
+
+export interface Categoria {
+  id: string;
+  nome: string;
+  cor: string; // hex ou nome
+  webhook?: string;
+}
+
+export interface Envolvido {
+  id: string;
+  nome: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  descricao: string;
+  feito: boolean;
+}
+
+export interface Checklist {
+  id: string;
+  titulo: string;
+  itens: ChecklistItem[];
+}
+
+export interface Task {
+  id: string;
+  titulo: string;
+  descricao: string;
+  status: TaskStatus;
+  categoria: Categoria;
+  envolvidos: Envolvido[];
+  checklists: Checklist[];
+  criadoEm: string;
+  atualizadoEm: string;
+  arquivada?: boolean;
+}

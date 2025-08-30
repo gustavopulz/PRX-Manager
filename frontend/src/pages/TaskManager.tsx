@@ -1,0 +1,289 @@
+import React, { useEffect, useState } from 'react';
+import SelectCategoriaModal from '../components/Tasks/SelectCategoriaModal';
+import SelectEnvolvidoModal from '../components/Tasks/SelectEnvolvidoModal';
+import EditFilaModal from '../components/Tasks/EditFilaModal';
+import { TaskList } from '../components/Tasks/TaskList';
+import { TaskModal } from '../components/Tasks/TaskModal';
+import { TaskForm } from '../components/Tasks/TaskForm';
+import CreateCategoriaModal from '../components/Tasks/CreateCategoriaModal';
+import CreateEnvolvidoModal from '../components/Tasks/CreateEnvolvidoModal';
+import { TaskDetails } from '../components/Tasks/TaskDetails';
+import type { Task, Categoria, Envolvido } from '../types';
+import {
+  getTasksFromFirestore,
+  saveTaskToFirestore,
+  deleteTaskFromFirestore,
+  getCategoriasFromFirestore,
+  getEnvolvidosFromFirestore,
+  updateTaskInFirestore,
+} from '../database/api';
+
+// Função para enviar mensagem ao Discord
+async function sendDiscordWebhook(task: Task) {
+  const webhook = task.categoria?.webhook;
+  if (!webhook) return;
+  const body = {
+    embeds: [
+      {
+        title: `Tarefa: ${task.titulo}`,
+        description: `Status: ${task.status}\nDescrição: ${task.descricao}`,
+        color: 5814783,
+      },
+    ],
+  };
+  try {
+    await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error('Erro ao enviar webhook:', err);
+  }
+}
+
+const TaskManager: React.FC = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [showConcluidos, setShowConcluidos] = useState(false);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateCategoriaModal, setShowCreateCategoriaModal] =
+    useState(false);
+  const [showCreateEnvolvidoModal, setShowCreateEnvolvidoModal] =
+    useState(false);
+  const [selectCategoriaTask, setSelectCategoriaTask] = useState<Task | null>(
+    null
+  );
+  const [selectEnvolvidoTask, setSelectEnvolvidoTask] = useState<Task | null>(
+    null
+  );
+  const [editFilaTask, setEditFilaTask] = useState<Task | null>(null);
+
+  // Listeners para eventos de edição
+  useEffect(() => {
+    function handleSelectCategoria(e: any) {
+      setSelectCategoriaTask(e.detail);
+    }
+    function handleSelectEnvolvidos(e: any) {
+      setSelectEnvolvidoTask(e.detail);
+    }
+    function handleEditFila(e: any) {
+      setEditFilaTask(e.detail);
+    }
+    window.addEventListener('editCategoria', handleSelectCategoria);
+    window.addEventListener('editEnvolvidos', handleSelectEnvolvidos);
+    window.addEventListener('editFila', handleEditFila);
+    return () => {
+      window.removeEventListener('editCategoria', handleSelectCategoria);
+      window.removeEventListener('editEnvolvidos', handleSelectEnvolvidos);
+      window.removeEventListener('editFila', handleEditFila);
+    };
+  }, []);
+
+  function handleUpdateFila(status: any) {
+    if (!editFilaTask) return;
+    const arquivada = status === 'Concluído';
+    const updatedTask = { ...editFilaTask, status, arquivada };
+    updateTaskInFirestore(updatedTask.id, updatedTask).then(() => {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      );
+      setEditFilaTask(null);
+      sendDiscordWebhook(updatedTask);
+    });
+  }
+
+  useEffect(() => {
+    getTasksFromFirestore().then(setTasks);
+    getCategoriasFromFirestore().then(setCategorias);
+    getEnvolvidosFromFirestore().then(setEnvolvidos);
+  }, []);
+
+  function handleSaveTask(task: Task) {
+    const arquivada = task.status === 'Concluído';
+    const newTask = { ...task, arquivada };
+    saveTaskToFirestore(newTask).then(() => {
+      setTasks((prev) => [...prev, newTask]);
+      sendDiscordWebhook(newTask);
+    });
+  }
+
+  function handleEditTask(task: Task) {
+    setSelectedTask(task);
+    setShowDetails(true);
+  }
+
+  function handleDeleteTask(id: string) {
+    deleteTaskFromFirestore(id).then(() => {
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    });
+  }
+
+  function handleShowDetails(task: Task) {
+    setSelectedTask(task);
+    setShowDetails(false);
+  }
+
+  function handleSelectCategoriaSave(categoria: Categoria) {
+    if (!selectCategoriaTask) return;
+    const updatedTask = { ...selectCategoriaTask, categoria };
+    saveTaskToFirestore(updatedTask).then(() => {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      );
+      setSelectCategoriaTask(null);
+      sendDiscordWebhook(updatedTask);
+    });
+  }
+
+  function handleSelectEnvolvidoSave(envolvidos: Envolvido[]) {
+    if (!selectEnvolvidoTask) return;
+    const updatedTask = { ...selectEnvolvidoTask, envolvidos };
+    saveTaskToFirestore(updatedTask).then(() => {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      );
+      setSelectEnvolvidoTask(null);
+      sendDiscordWebhook(updatedTask);
+    });
+  }
+
+  function handleUpdateTask(task: Task) {
+    updateTaskInFirestore(task.id, task).then(() => {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+      setSelectedTask(task);
+      sendDiscordWebhook(task);
+    });
+  }
+
+  return (
+    <div className="py-6">
+      <div className="flex gap-4 mb-4">
+        <button
+          className={`px-4 py-2 rounded ${showConcluidos ? 'bg-green-700 text-white' : 'bg-slate-700 text-white'}`}
+          onClick={() => setShowConcluidos(false)}
+        >
+          Tarefas Ativas
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${showConcluidos ? 'bg-green-500 text-white' : 'bg-slate-700 text-white'}`}
+          onClick={() => setShowConcluidos(true)}
+        >
+          Concluídas/Arquivadas
+        </button>
+      </div>
+      <div className="mt-4 bg-slate-800 rounded-xl p-4 shadow">
+        <TaskList
+          tasks={
+            showConcluidos
+              ? tasks.filter((t) => t.arquivada)
+              : tasks.filter((t) => !t.arquivada)
+          }
+          onEdit={handleEditTask}
+          onDelete={handleDeleteTask}
+          onShowDetails={handleShowDetails}
+          onCreateCategoria={() => setShowCreateCategoriaModal(true)}
+          onCreateEnvolvido={() => setShowCreateEnvolvidoModal(true)}
+          onCreateTask={() => setShowCreateModal(true)}
+        />
+      </div>
+
+      {/* Modal de criação de categoria */}
+      <CreateCategoriaModal
+        isOpen={showCreateCategoriaModal}
+        onClose={() => setShowCreateCategoriaModal(false)}
+        onSave={(categoria) => {
+          setCategorias((prev) => [...prev, categoria]);
+          setShowCreateCategoriaModal(false);
+        }}
+      />
+
+      {/* Modal de criação de envolvido */}
+      <CreateEnvolvidoModal
+        isOpen={showCreateEnvolvidoModal}
+        onClose={() => setShowCreateEnvolvidoModal(false)}
+        onSave={(envolvido) => {
+          setEnvolvidos((prev) => [...prev, envolvido]);
+          setShowCreateEnvolvidoModal(false);
+        }}
+      />
+
+      {/* Modal de criação de tarefa */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-xl w-full max-w-2xl p-6 relative">
+            <h2 className="text-lg font-semibold mb-4 text-white">
+              Criar Tarefa
+            </h2>
+            <TaskForm
+              categorias={categorias}
+              envolvidos={envolvidos}
+              onSave={(task) => {
+                handleSaveTask(task);
+                setShowCreateModal(false);
+              }}
+            />
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="mt-4 px-4 py-2 bg-slate-700 text-white rounded"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de detalhes */}
+      {selectedTask && !showDetails && (
+        <TaskModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onEdit={handleEditTask}
+        />
+      )}
+
+      {/* Modal de edição */}
+      {selectedTask && showDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-xl w-full max-w-2xl p-6 relative">
+            <TaskDetails task={selectedTask} onUpdateTask={handleUpdateTask} />
+            <button
+              onClick={() => setShowDetails(false)}
+              className="mt-4 px-4 py-2 bg-slate-700 text-white rounded"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <SelectCategoriaModal
+        categorias={categorias}
+        task={selectCategoriaTask}
+        isOpen={!!selectCategoriaTask}
+        onClose={() => setSelectCategoriaTask(null)}
+        onSave={handleSelectCategoriaSave}
+      />
+
+      <SelectEnvolvidoModal
+        envolvidos={envolvidos}
+        task={selectEnvolvidoTask}
+        isOpen={!!selectEnvolvidoTask}
+        onClose={() => setSelectEnvolvidoTask(null)}
+        onSave={handleSelectEnvolvidoSave}
+      />
+
+      <EditFilaModal
+        task={editFilaTask}
+        isOpen={!!editFilaTask}
+        onClose={() => setEditFilaTask(null)}
+        onSave={handleUpdateFila}
+      />
+    </div>
+  );
+};
+
+export default TaskManager;

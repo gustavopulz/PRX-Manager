@@ -1,61 +1,28 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import Home from './pages/Home';
-import About from './pages/About';
 import LoginPage from './pages/LoginPage';
-import Modal from './components/Modal';
-import SystemForm from './components/SystemForm';
-import SendMessageForm from './components/SendMessageForm';
-import type { System, Message } from './types';
 import Header from './components/Header';
 import { onUserChanged, logout } from './database/auth';
+import TaskManager from './pages/TaskManager';
 
 export default function App() {
-  const [systems, setSystems] = useState<System[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [showSystemModal, setShowSystemModal] = useState(false);
-  const [showMessageModal, setShowMessageModal] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onUserChanged(setUser);
+    const unsubscribe = onUserChanged((u) => {
+      setUser(u);
+      setLoadingAuth(false);
+    });
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      (async () => {
-        try {
-          const { getSystemsFromFirestore, getMessagesFromFirestore } = await import('./database/api');
-          const [fetchedSystems, fetchedMessages] = await Promise.all([
-            getSystemsFromFirestore(),
-            getMessagesFromFirestore()
-          ]);
-          setSystems(fetchedSystems);
-          setMessages(fetchedMessages);
-        } catch (err) {
-          console.error('Erro ao buscar dados do Firestore:', err);
-        }
-      })();
-    }
-  }, [user]);
-
-  async function handleSaveSystem(system: System) {
-    try {
-      const { saveSystemToFirestore } = await import('./database/api');
-      await saveSystemToFirestore(system);
-      const updated = [...systems, system];
-      setSystems(updated);
-      setShowSystemModal(false);
-    } catch (err) {
-      alert('Erro ao salvar sistema no Firestore: ' + err);
-    }
-  }
-
-  function handleSendMessage(msg: Message) {
-    const updated = [...messages, msg];
-    setMessages(updated);
-    setShowMessageModal(false);
+  if (loadingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-900">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -69,32 +36,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
-      <Header
-        onOpenSystemModal={() => setShowSystemModal(true)}
-        onOpenMessageModal={() => setShowMessageModal(true)}
-      />
-      <button className="absolute top-4 right-4 button-blue" onClick={logout}>Sair</button>
+      <Header onLogout={logout} />
       <main className="px-4 sm:px-6 lg:px-20 2xl:px-40 py-6">
         <Routes>
-          <Route path="/" element={<Home systems={systems} messages={messages} />} />
-          <Route path="/about" element={<About />} />
+          <Route path="/" element={<TaskManager />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
-      <Modal
-        isOpen={showSystemModal}
-        onClose={() => setShowSystemModal(false)}
-        title="Cadastrar Sistema"
-      >
-        <SystemForm onSave={handleSaveSystem} />
-      </Modal>
-      <Modal
-        isOpen={showMessageModal}
-        onClose={() => setShowMessageModal(false)}
-        title="Enviar Mensagem"
-      >
-        <SendMessageForm systems={systems} onSend={handleSendMessage} />
-      </Modal>
     </div>
   );
 }

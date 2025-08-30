@@ -1,43 +1,37 @@
 import { Link } from 'react-router-dom';
 
 interface HeaderProps {
-  onOpenSystemModal: () => void;
-  onOpenMessageModal: () => void;
+  onLogout: () => void;
 }
 
-export default function Header({
-  onOpenSystemModal,
-  onOpenMessageModal,
-}: HeaderProps) {
+export default function Header({ onLogout }: HeaderProps) {
   return (
-    <header className="bg-slate-900 px-4 sm:px-6 lg:px-20 2xl:px-40 border-b border-slate-700">
+    <header className="bg-gradient-to-r from-slate-900 to-slate-800 px-4 sm:px-6 lg:px-20 2xl:px-40 border-b border-slate-700 shadow-md">
       <div className="flex items-center justify-between py-4">
-        {/* Título + Botões */}
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold">PRXLab - Manager</h1>
-
-          <button
-            onClick={onOpenSystemModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm"
-          >
-            Cadastrar Sistema
-          </button>
-          <button
-            onClick={onOpenMessageModal}
-            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm"
-          >
-            Enviar Mensagem
-          </button>
+        {/* Título */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white font-bold">
+            P
+          </div>
+          <h1 className="text-lg sm:text-xl font-bold text-white">
+            PRXLab <span className="text-blue-500">Manager</span>
+          </h1>
         </div>
 
         {/* Navegação */}
-        <nav className="flex gap-4 text-sm">
-          <Link to="/" className="hover:underline">
-            Home
+        <nav className="flex items-center gap-6 text-sm font-medium">
+          <Link
+            to="/"
+            className="text-slate-300 hover:text-white transition-colors"
+          >
+            Tarefas
           </Link>
-          <Link to="/about" className="hover:underline">
-            Sobre
-          </Link>
+          <button
+            onClick={onLogout}
+            className="ml-4 px-4 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white transition"
+          >
+            Sair
+          </button>
         </nav>
       </div>
     </header>
