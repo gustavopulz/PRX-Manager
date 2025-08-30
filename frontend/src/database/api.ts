@@ -26,7 +26,7 @@ export async function getSystemsFromFirestore(): Promise<System[]> {
 }
 
 // --- TASK SYSTEM ---
-import type { Task, Categoria, Envolvido, Checklist } from '../types';
+import type { Task, Categoria, Envolvido, Checklist, Flag } from '../types';
 import { getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // Tasks
@@ -92,4 +92,14 @@ export async function saveChecklistToFirestore(checklist: Checklist) {
 export async function getChecklistsFromFirestore(): Promise<Checklist[]> {
   const snapshot = await getDocs(collection(firestore, 'manager_checklists'));
   return snapshot.docs.map((doc) => doc.data() as Checklist);
+}
+
+// Flags
+export async function saveFlagToFirestore(flag: Flag) {
+  await setDoc(doc(collection(firestore, 'manager_flags'), flag.id), flag);
+}
+
+export async function getFlagsFromFirestore(): Promise<Flag[]> {
+  const snapshot = await getDocs(collection(firestore, 'manager_flags'));
+  return snapshot.docs.map((doc) => doc.data() as Flag);
 }

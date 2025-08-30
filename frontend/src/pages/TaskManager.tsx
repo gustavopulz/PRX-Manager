@@ -19,16 +19,62 @@ import {
   updateTaskInFirestore,
 } from '../database/api';
 
-// Função para enviar mensagem ao Discord
-async function sendDiscordWebhook(task: Task) {
-  const webhook = task.categoria?.webhook;
+// Função para enviar mensagem ao Discord — prioriza webhook da flag, se existir
+async function sendDiscordWebhook(task: Task, flagsList: Flag[]) {
+  // Tenta webhook da flag (primeiro nas flags da categoria, depois nas flags globais)
+  let webhook: string | undefined;
+  if (task.flagId) {
+    webhook =
+      task.categoria?.flags?.find((f) => f.id === task.flagId)?.webhook ||
+      flagsList?.find((f) => f.id === task.flagId)?.webhook;
+  }
+
+  // Fallback para webhook da categoria
+  if (!webhook) webhook = task.categoria?.webhook;
   if (!webhook) return;
+
+  // Busca nome da flag para incluir no embed (opcional)
+  const flagName = task.flagId
+    ? task.categoria?.flags?.find((f) => f.id === task.flagId)?.nome ||
+      flagsList?.find((f) => f.id === task.flagId)?.nome
+    : undefined;
+
+  // Calcula progresso a partir dos checklists (percentual)
+  const totalItems =
+    task.checklists?.reduce((acc, cl) => acc + (cl.itens?.length || 0), 0) || 0;
+  const doneItems =
+    task.checklists?.reduce(
+      (acc, cl) => acc + (cl.itens?.filter((it) => it.feito).length || 0),
+      0
+    ) || 0;
+  const progress =
+    totalItems === 0 ? 0 : Math.round((doneItems / totalItems) * 100);
+
+  // Cor do embed baseada no status (hex as int)
+  const statusColorMap: Record<string, number> = {
+    Triagem: parseInt('F97316', 16), // orange
+    'Em Andamento': parseInt('3B82F6', 16), // blue
+    Testes: parseInt('FBBF24', 16), // yellow
+    Concluído: parseInt('10B981', 16), // green
+  };
+  const color = statusColorMap[task.status] || parseInt('374151', 16);
+
+  const envolvidosText =
+    task.envolvidos && task.envolvidos.length > 0
+      ? task.envolvidos.map((e) => e.nome).join(', ')
+      : '—';
+
   const body = {
     embeds: [
       {
-        title: `Tarefa: ${task.titulo}`,
-        description: `Status: ${task.status}\nDescrição: ${task.descricao}`,
-        color: 5814783,
+        title: `#${task.id} - ${task.titulo}`,
+        description:
+          `${flagName || 'Nenhuma'}\n\n` +
+          `Status: ${task.status} (Progresso: ${progress}%)\n` +
+          `Descrição: ${task.descricao || '—'}\n` +
+          `Categoria: ${task.categoria?.nome || '—'}\n` +
+          `Envolvidos: ${envolvidosText}`,
+        color,
       },
     ],
   };
@@ -102,7 +148,7 @@ const TaskManager: React.FC = () => {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
       setEditFilaTask(null);
-      sendDiscordWebhook(updatedTask);
+      sendDiscordWebhook(updatedTask, flags);
     });
   }
 
@@ -110,6 +156,10 @@ const TaskManager: React.FC = () => {
     getTasksFromFirestore().then(setTasks);
     getCategoriasFromFirestore().then(setCategorias);
     getEnvolvidosFromFirestore().then(setEnvolvidos);
+    // Carrega flags
+    import('../database/api').then(({ getFlagsFromFirestore }) => {
+      getFlagsFromFirestore().then((f) => setFlags(f || []));
+    });
   }, []);
 
   function handleSaveTask(task: Task) {
@@ -117,7 +167,7 @@ const TaskManager: React.FC = () => {
     const newTask = { ...task, arquivada };
     saveTaskToFirestore(newTask).then(() => {
       setTasks((prev) => [...prev, newTask]);
-      sendDiscordWebhook(newTask);
+      sendDiscordWebhook(newTask, flags);
     });
   }
 
@@ -145,7 +195,7 @@ const TaskManager: React.FC = () => {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
       setSelectCategoriaTask(null);
-      sendDiscordWebhook(updatedTask);
+      sendDiscordWebhook(updatedTask, flags);
     });
   }
 
@@ -157,7 +207,7 @@ const TaskManager: React.FC = () => {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
       setSelectEnvolvidoTask(null);
-      sendDiscordWebhook(updatedTask);
+      sendDiscordWebhook(updatedTask, flags);
     });
   }
 
@@ -165,7 +215,7 @@ const TaskManager: React.FC = () => {
     updateTaskInFirestore(task.id, task).then(() => {
       setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
       setSelectedTask(task);
-      sendDiscordWebhook(task);
+      sendDiscordWebhook(task, flags);
     });
   }
 
@@ -308,6 +358,10 @@ const TaskManager: React.FC = () => {
         onSave={(newFlags) => {
           setFlags(newFlags);
           setShowFlagModal(false);
+          // Persiste flags no Firestore
+          import('../database/api').then(({ saveFlagToFirestore }) => {
+            newFlags.forEach((f) => saveFlagToFirestore(f));
+          });
         }}
       />
 
@@ -362,7 +416,7 @@ const TaskManager: React.FC = () => {
                       prev.map((t) => (t.id === updated.id ? updated : t))
                     );
                     setAssignFlagTask(null);
-                    sendDiscordWebhook(updated);
+                    sendDiscordWebhook(updated, flags);
                   });
                 }}
               >
