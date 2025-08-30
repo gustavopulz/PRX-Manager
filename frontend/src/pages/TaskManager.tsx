@@ -148,7 +148,6 @@ const TaskManager: React.FC = () => {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
       setEditFilaTask(null);
-      sendDiscordWebhook(updatedTask, flags);
     });
   }
 
@@ -167,6 +166,7 @@ const TaskManager: React.FC = () => {
     const newTask = { ...task, arquivada };
     saveTaskToFirestore(newTask).then(() => {
       setTasks((prev) => [...prev, newTask]);
+      // Envia webhook apenas na criação
       sendDiscordWebhook(newTask, flags);
     });
   }
@@ -195,7 +195,6 @@ const TaskManager: React.FC = () => {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
       setSelectCategoriaTask(null);
-      sendDiscordWebhook(updatedTask, flags);
     });
   }
 
@@ -207,7 +206,6 @@ const TaskManager: React.FC = () => {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
       setSelectEnvolvidoTask(null);
-      sendDiscordWebhook(updatedTask, flags);
     });
   }
 
@@ -215,7 +213,6 @@ const TaskManager: React.FC = () => {
     updateTaskInFirestore(task.id, task).then(() => {
       setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
       setSelectedTask(task);
-      sendDiscordWebhook(task, flags);
     });
   }
 
@@ -416,7 +413,6 @@ const TaskManager: React.FC = () => {
                       prev.map((t) => (t.id === updated.id ? updated : t))
                     );
                     setAssignFlagTask(null);
-                    sendDiscordWebhook(updated, flags);
                   });
                 }}
               >
